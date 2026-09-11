@@ -1,14 +1,195 @@
-* {
-  box-sizing: border-box;
+:root {
+  --bg: #FAF7F1;
+  --surface: #FFFFFF;
+  --ink: #22261F;
+  --ink-soft: #5B6156;
+  --green: #2F6B4F;
+  --green-dark: #204A37;
+  --mustard: #E3A23B;
+  --line: #E5E0D4;
+  --danger: #B4453B;
+  --radius: 14px;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  font-family: sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Noto Sans Bengali", "Hind Siliguri", -apple-system, sans-serif;
 }
+
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--green-dark);
+  color: #fff;
+  padding: 18px 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.topbar .sub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #C9D9CE;
+}
+
+.content {
+  flex: 1;
+  padding: 16px 16px 90px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cat-tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 14px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cat-tile:active {
+  background: #F1EEE3;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 12px 0 5px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 15px;
+  color: var(--ink);
+  font-family: inherit;
+}
+
+button.primary {
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+button.primary:active { background: var(--green-dark); }
+
+button.ghost {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.price-row:last-child { border-bottom: none; }
+
+.price-row .name { font-weight: 600; font-size: 15px; }
+.price-row .meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.price-row .amount { font-weight: 700; color: var(--green-dark); font-size: 15.5px; white-space: nowrap; }
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 6px;
+}
+.badge.pending { background: #FBEBD1; color: #8A5A17; }
+.badge.approved { background: #DCEEDF; color: var(--green-dark); }
+.badge.rejected { background: #F6DCD9; color: var(--danger); }
+
+.navbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: flex;
+  padding: 8px 6px calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+
+.navbar button {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding: 6px 0;
+}
+
+.navbar button.active { color: var(--green); font-weight: 700; }
+
+.error-text { color: var(--danger); font-size: 13px; margin-top: 8px; }
+.empty { text-align: center; color: var(--ink-soft); padding: 30px 10px; font-size: 14px; }
+.top-back { background: none; border: none; color: #C9D9CE; font-size: 14px; padding: 0; margin-bottom: 4px; }
