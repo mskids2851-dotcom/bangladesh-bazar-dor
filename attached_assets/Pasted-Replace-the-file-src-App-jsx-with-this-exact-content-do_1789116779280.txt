@@ -1,3 +1,6 @@
+Replace the file src/App.jsx with this exact content, do not modify anything:
+
+FILE: src/App.jsx
 import React, { useEffect, useState } from "react";
 import {
   onAuthStateChanged,
@@ -344,8 +347,6 @@ function ProfileScreen({ user }) {
   );
 }
 
-
-
 function AdminScreen() {
   const [items, setItems] = useState([]);
   const [dbError, setDbError] = useState("");
@@ -385,3 +386,9 @@ function AdminScreen() {
   );
 }
 
+Also add this CSS to the end of src/index.css (append, do not remove anything existing):
+
+.price-thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.price-thumb-large { width: 100%; max-height: 160px; border-radius: 10px; object-fit: cover; margin-bottom: 8px; }
+
+After making both changes exactly as given, restart the app and tell me it's done.

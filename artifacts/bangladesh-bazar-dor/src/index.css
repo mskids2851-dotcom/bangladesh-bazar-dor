@@ -239,3 +239,5 @@ button.link {
 .success-text { color: var(--teal); font-size: 13px; margin-top: 9px; font-weight: 600; }
 .empty { text-align: center; color: var(--ink-soft); padding: 34px 10px; font-size: 14px; }
 .top-back { background: none; border: none; color: #C9D9CE; font-size: 14px; padding: 0; margin-bottom: 6px; font-weight: 600; }
+.price-thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.price-thumb-large { width: 100%; max-height: 160px; border-radius: 10px; object-fit: cover; margin-bottom: 8px; }
