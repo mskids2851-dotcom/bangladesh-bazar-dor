@@ -344,8 +344,6 @@ function ProfileScreen({ user }) {
   );
 }
 
-
-
 function AdminScreen() {
   const [items, setItems] = useState([]);
   const [dbError, setDbError] = useState("");
