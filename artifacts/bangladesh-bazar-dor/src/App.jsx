@@ -182,6 +182,7 @@ function HomeScreen({ onOpenCategory }) {
 function CategoryPricesScreen({ category, user }) {
   const [district, setDistrict] = useState(DISTRICTS[0]);
   const [items, setItems] = useState([]);
+  const [dbError, setDbError] = useState("");
 
   useEffect(() => {
     const q = query(
@@ -193,12 +194,13 @@ function CategoryPricesScreen({ category, user }) {
     );
     const unsub = onSnapshot(q, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => setDbError(err.message));
     return unsub;
   }, [category, district]);
 
   return (
     <div>
+      {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
       <label>জেলা বাছাই করুন</label>
       <select value={district} onChange={(e) => setDistrict(e.target.value)}>
         {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -293,6 +295,7 @@ function AddPriceScreen({ user, onDone }) {
 
 function ProfileScreen({ user }) {
   const [items, setItems] = useState([]);
+  const [dbError, setDbError] = useState("");
 
   useEffect(() => {
     const q = query(
@@ -302,7 +305,7 @@ function ProfileScreen({ user }) {
     );
     const unsub = onSnapshot(q, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => setDbError(err.message));
     return unsub;
   }, [user]);
 
@@ -312,6 +315,7 @@ function ProfileScreen({ user }) {
 
   return (
     <div className="card">
+      {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
       <div className="meta" style={{ marginBottom: 8 }}>{user.email}</div>
       {items.length === 0 && <div className="empty">আপনি এখনো কোনো দাম যোগ করেননি।</div>}
       {items.map((it) => (
@@ -334,6 +338,7 @@ function ProfileScreen({ user }) {
 
 function AdminScreen() {
   const [items, setItems] = useState([]);
+  const [dbError, setDbError] = useState("");
 
   useEffect(() => {
     const q = query(
@@ -343,7 +348,7 @@ function AdminScreen() {
     );
     const unsub = onSnapshot(q, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => setDbError(err.message));
     return unsub;
   }, []);
 
@@ -353,6 +358,7 @@ function AdminScreen() {
 
   return (
     <div className="card">
+      {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
       {items.length === 0 && <div className="empty">অপেক্ষমান কোনো পোস্ট নেই।</div>}
       {items.map((it) => (
         <div className="price-row" key={it.id} style={{ flexDirection: "column", alignItems: "stretch" }}>
