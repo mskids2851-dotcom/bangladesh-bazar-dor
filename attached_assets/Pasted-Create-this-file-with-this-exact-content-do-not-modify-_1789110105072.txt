@@ -1,0 +1,374 @@
+Create this file with this exact content, do not modify or add anything:
+
+FILE: src/App.jsx
+import React, { useEffect, useState } from "react";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, db, ADMIN_EMAILS } from "./firebase";
+import { CATEGORIES, DISTRICTS, UNITS } from "./data";
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [screen, setScreen] = useState("home");
+  const [activeCategory, setActiveCategory] = useState(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  if (authLoading) return <div className="app-shell"><div className="content">লোড হচ্ছে...</div></div>;
+  if (!user) return <LoginScreen />;
+
+  const isAdmin = ADMIN_EMAILS.includes(user.email);
+
+  return (
+    <div className="app-shell">
+      <TopBar
+        screen={screen}
+        activeCategory={activeCategory}
+        onBack={() => { setScreen("home"); setActiveCategory(null); }}
+      />
+      <div className="content">
+        {screen === "home" && (
+          <HomeScreen
+            onOpenCategory={(cat) => { setActiveCategory(cat); setScreen("categoryPrices"); }}
+          />
+        )}
+        {screen === "categoryPrices" && activeCategory && (
+          <CategoryPricesScreen category={activeCategory} user={user} />
+        )}
+        {screen === "addPrice" && <AddPriceScreen user={user} onDone={() => setScreen("home")} />}
+        {screen === "profile" && <ProfileScreen user={user} />}
+        {screen === "admin" && isAdmin && <AdminScreen />}
+      </div>
+      <NavBar screen={screen} setScreen={(s) => { setScreen(s); setActiveCategory(null); }} isAdmin={isAdmin} />
+    </div>
+  );
+}
+
+function TopBar({ screen, activeCategory, onBack }) {
+  const titles = {
+    home: "বাংলাদেশ বাজার দর",
+    categoryPrices: activeCategory ? activeCategory.name : "",
+    addPrice: "দাম যোগ করুন",
+    profile: "আমার তথ্য",
+    admin: "এডমিন প্যানেল",
+  };
+  return (
+    <div className="topbar">
+      {screen !== "home" && (
+        <button className="top-back" onClick={onBack}>← হোম</button>
+      )}
+      <h1>{titles[screen]}</h1>
+      {screen === "home" && <div className="sub">সারা দেশের বাজার দর, এক জায়গায়</div>}
+    </div>
+  );
+}
+
+function NavBar({ screen, setScreen, isAdmin }) {
+  return (
+    <div className="navbar">
+      <button className={screen === "home" ? "active" : ""} onClick={() => setScreen("home")}>হোম</button>
+      <button className={screen === "addPrice" ? "active" : ""} onClick={() => setScreen("addPrice")}>দাম যোগ</button>
+      <button className={screen === "profile" ? "active" : ""} onClick={() => setScreen("profile")}>আমার তথ্য</button>
+      {isAdmin && (
+        <button className={screen === "admin" ? "active" : ""} onClick={() => setScreen("admin")}>এডমিন</button>
+      )}
+      <button onClick={() => signOut(auth)}>লগআউট</button>
+    </div>
+  );
+}
+
+function LoginScreen() {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      if (mode === "login") {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err) {
+      setError(errorToBangla(err.code));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="app-shell">
+      <div className="topbar">
+        <h1>বাংলাদেশ বাজার দর</h1>
+        <div className="sub">সবার জন্য সঠিক বাজার দর</div>
+      </div>
+      <div className="content">
+        <form className="card" onSubmit={submit}>
+          <label>ইমেইল</label>
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+          <label>পাসওয়ার্ড</label>
+          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="কমপক্ষে ৬ অক্ষর" />
+          {error && <div className="error-text">{error}</div>}
+          <button className="primary" type="submit" disabled={loading}>
+            {loading ? "অপেক্ষা করুন..." : mode === "login" ? "লগইন করুন" : "অ্যাকাউন্ট তৈরি করুন"}
+          </button>
+          <button
+            type="button"
+            className="link"
+            onClick={() => setMode(mode === "login" ? "signup" : "login")}
+          >
+            {mode === "login" ? "নতুন অ্যাকাউন্ট তৈরি করুন" : "আগে থেকে অ্যাকাউন্ট আছে? লগইন করুন"}
+          </button>
+        </form>
+        <div className="empty">
+          নোট: এই MVP ভার্সনে ইমেইল/পাসওয়ার্ড দিয়ে লগইন করা হয়েছে সহজভাবে শুরু করার জন্য।
+          পরে চাইলে ফোন নাম্বার + OTP যোগ করা যাবে।
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function errorToBangla(code) {
+  const map = {
+    "auth/invalid-email": "সঠিক ইমেইল দিন",
+    "auth/email-already-in-use": "এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে",
+    "auth/weak-password": "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে",
+    "auth/wrong-password": "পাসওয়ার্ড ভুল হয়েছে",
+    "auth/user-not-found": "এই ইমেইলে কোনো অ্যাকাউন্ট নেই",
+    "auth/invalid-credential": "ইমেইল বা পাসওয়ার্ড ভুল",
+  };
+  return map[code] || "কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন";
+}
+
+function HomeScreen({ onOpenCategory }) {
+  return (
+    <div>
+      <div className="cat-grid">
+        {CATEGORIES.map((c) => (
+          <button key={c.id} className="cat-tile" onClick={() => onOpenCategory(c)}>
+            {c.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CategoryPricesScreen({ category, user }) {
+  const [district, setDistrict] = useState(DISTRICTS[0]);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "prices"),
+      where("categoryId", "==", category.id),
+      where("districtId", "==", district),
+      where("status", "==", "approved"),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, [category, district]);
+
+  return (
+    <div>
+      <label>জেলা বাছাই করুন</label>
+      <select value={district} onChange={(e) => setDistrict(e.target.value)}>
+        {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
+
+      <div className="card" style={{ marginTop: 14 }}>
+        {items.length === 0 && <div className="empty">এই জেলা ও ক্যাটাগরিতে এখনো কোনো দাম যোগ হয়নি।</div>}
+        {items.map((it) => (
+          <div className="price-row" key={it.id}>
+            <div>
+              <div className="name">{it.productName}</div>
+              <div className="meta">{it.upazila ? it.upazila + ", " : ""}{it.districtId}</div>
+            </div>
+            <div className="amount">৳{it.price}/{it.unit}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AddPriceScreen({ user, onDone }) {
+  const [productName, setProductName] = useState("");
+  const [categoryId, setCategoryId] = useState(CATEGORIES[0].id);
+  const [districtId, setDistrictId] = useState(DISTRICTS[0]);
+  const [upazila, setUpazila] = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState(UNITS[0]);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg("");
+    try {
+      await addDoc(collection(db, "prices"), {
+        productName,
+        categoryId,
+        districtId,
+        upazila,
+        price: Number(price),
+        unit,
+        postedBy: user.uid,
+        postedByEmail: user.email,
+        status: "pending",
+        upvotes: 0,
+        downvotes: 0,
+        createdAt: serverTimestamp(),
+      });
+      setMsg("ধন্যবাদ! আপনার তথ্য অ্যাডমিন অনুমোদনের পর সবাই দেখতে পাবে।");
+      setProductName(""); setPrice(""); setUpazila("");
+    } catch (err) {
+      setMsg("সেভ করা যায়নি, আবার চেষ্টা করুন।");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <form className="card" onSubmit={submit}>
+      <label>পণ্যের নাম</label>
+      <input required value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="যেমন: আলু, পেঁয়াজ" />
+
+      <label>ক্যাটাগরি</label>
+      <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+        {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+
+      <label>জেলা</label>
+      <select value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
+        {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
+
+      <label>উপজেলা (ঐচ্ছিক)</label>
+      <input value={upazila} onChange={(e) => setUpazila(e.target.value)} placeholder="যেমন: সাভার" />
+
+      <label>দাম (টাকা)</label>
+      <input required type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="যেমন: ৪৫" />
+
+      <label>একক</label>
+      <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+      </select>
+
+      {msg && <div className="error-text" style={{ color: "var(--green-dark)" }}>{msg}</div>}
+      <button className="primary" type="submit" disabled={saving}>
+        {saving ? "সেভ হচ্ছে..." : "দাম জমা দিন"}
+      </button>
+    </form>
+  );
+}
+
+function ProfileScreen({ user }) {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "prices"),
+      where("postedBy", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, [user]);
+
+  const remove = async (id) => {
+    await deleteDoc(doc(db, "prices", id));
+  };
+
+  return (
+    <div className="card">
+      <div className="meta" style={{ marginBottom: 8 }}>{user.email}</div>
+      {items.length === 0 && <div className="empty">আপনি এখনো কোনো দাম যোগ করেননি।</div>}
+      {items.map((it) => (
+        <div className="price-row" key={it.id}>
+          <div>
+            <div className="name">
+              {it.productName}
+              <span className={`badge ${it.status}`}>
+                {it.status === "pending" ? "অপেক্ষমান" : it.status === "approved" ? "অনুমোদিত" : "বাতিল"}
+              </span>
+            </div>
+            <div className="meta">{it.districtId} · ৳{it.price}/{it.unit}</div>
+          </div>
+          <button className="link" onClick={() => remove(it.id)}>ডিলিট</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminScreen() {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "prices"),
+      where("status", "==", "pending"),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, []);
+
+  const act = async (id, status) => {
+    await updateDoc(doc(db, "prices", id), { status });
+  };
+
+  return (
+    <div className="card">
+      {items.length === 0 && <div className="empty">অপেক্ষমান কোনো পোস্ট নেই।</div>}
+      {items.map((it) => (
+        <div className="price-row" key={it.id} style={{ flexDirection: "column", alignItems: "stretch" }}>
+          <div className="name">{it.productName} — ৳{it.price}/{it.unit}</div>
+          <div className="meta">{it.districtId}{it.upazila ? ", " + it.upazila : ""} · {it.postedByEmail}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button className="primary" style={{ marginTop: 0 }} onClick={() => act(it.id, "approved")}>অনুমোদন</button>
+            <button className="ghost" style={{ marginTop: 0 }} onClick={() => act(it.id, "rejected")}>বাতিল</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+After creating this exactly as given, run npm install and start the app, then tell me the result.
