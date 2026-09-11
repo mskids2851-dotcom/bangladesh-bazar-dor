@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Bangladesh Bazar Dor"
+description = "A blank React JavaScript app scaffolded with the minimal Create React App structure and react-scripts."
+version = "1.0.0"
+id = "artifacts/bangladesh-bazar-dor"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18957
+
+[services.development]
+run = "pnpm --filter @workspace/bangladesh-bazar-dor run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bangladesh-bazar-dor", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bangladesh-bazar-dor/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18957"
+BASE_PATH = "/"

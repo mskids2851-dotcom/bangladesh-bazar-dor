@@ -1,6 +1,6 @@
-# [Project name]
+# Bangladesh Bazar Dor
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Blank React JavaScript app scaffolded with Create React App and `react-scripts`.
 
 ## Run & Operate
 
@@ -13,7 +13,8 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
+- pnpm workspaces, Node.js 24
+- Frontend: React 18, Create React App, `react-scripts`
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
