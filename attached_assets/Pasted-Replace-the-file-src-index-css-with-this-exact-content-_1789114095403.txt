@@ -1,3 +1,6 @@
+Replace the file src/index.css with this exact content, do not modify anything:
+
+FILE: src/index.css
 :root {
   --bg: #FBF5EA;
   --surface: #FFFFFF;
@@ -239,3 +242,5 @@ button.link {
 .success-text { color: var(--teal); font-size: 13px; margin-top: 9px; font-weight: 600; }
 .empty { text-align: center; color: var(--ink-soft); padding: 34px 10px; font-size: 14px; }
 .top-back { background: none; border: none; color: #C9D9CE; font-size: 14px; padding: 0; margin-bottom: 6px; font-weight: 600; }
+
+After creating this exactly as given, restart the app and tell me the result.

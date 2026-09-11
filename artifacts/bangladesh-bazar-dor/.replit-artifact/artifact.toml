@@ -12,10 +12,10 @@ paths = [ "/" ]
 localPort = 18957
 
 [services.development]
-run = "pnpm --filter @workspace/bangladesh-bazar-dor run dev"
+run = "pnpm --filter bangladesh-bazar-dor run start"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/bangladesh-bazar-dor", "run", "build" ]
+build = [ "pnpm", "--filter", "bangladesh-bazar-dor", "run", "build" ]
 serve = "static"
 publicDir = "artifacts/bangladesh-bazar-dor/dist/public"
 
