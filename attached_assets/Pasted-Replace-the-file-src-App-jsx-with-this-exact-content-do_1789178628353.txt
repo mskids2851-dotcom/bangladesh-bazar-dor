@@ -1,3 +1,6 @@
+Replace the file src/App.jsx with this exact content, do not modify anything:
+
+FILE: src/App.jsx
 import React, { useEffect, useState } from "react";
 import {
   onAuthStateChanged,
@@ -417,3 +420,10 @@ function AdminScreen() {
     </div>
   );
 }
+
+Also append this CSS to the end of src/index.css (do not remove anything existing):
+
+.filter-row { display: flex; gap: 8px; }
+.filter-row select { flex: 1; }
+
+After making both changes exactly as given, restart the app and tell me it's done.
