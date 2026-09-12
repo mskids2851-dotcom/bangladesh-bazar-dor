@@ -1,3 +1,6 @@
+Replace the file src/App.jsx with this exact content, do not modify anything:
+
+FILE: src/App.jsx
 import React, { useEffect, useState } from "react";
 import {
   onAuthStateChanged,
@@ -530,3 +533,13 @@ function AdminScreen() {
     </div>
   );
 }
+
+Now append this CSS to the end of src/index.css (do not remove anything existing):
+
+.time-ago { font-size: 11px; opacity: 0.8; }
+.map-link { display: inline-block; font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 4px; text-decoration: none; }
+.card-actions { display: flex; gap: 6px; margin-top: 8px; }
+.vote-btn { flex: 1; background: #F5F5F5; border: 1px solid var(--line); border-radius: 8px; padding: 5px 4px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.vote-btn:active { background: #ECECEC; }
+
+After making both changes exactly as given, restart the app and tell me it's done.
