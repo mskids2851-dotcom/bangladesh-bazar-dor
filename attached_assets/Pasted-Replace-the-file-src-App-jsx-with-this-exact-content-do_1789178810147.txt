@@ -1,3 +1,6 @@
+Replace the file src/App.jsx with this exact content, do not modify anything:
+
+FILE: src/App.jsx
 import React, { useEffect, useState } from "react";
 import {
   onAuthStateChanged,
@@ -443,3 +446,225 @@ function AdminScreen() {
     </div>
   );
 }
+
+Now replace the file src/index.css with this exact content, do not modify anything:
+
+FILE: src/index.css
+:root {
+  --bg: #F5F5F5;
+  --surface: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-soft: #7A7A7A;
+  --teal: #1B3A34;
+  --teal-light: #2C544C;
+  --primary: #E9541F;
+  --primary-dark: #C2430F;
+  --line: #ECECEC;
+  --danger: #B4453B;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Noto Sans Bengali", "Hind Siliguri", -apple-system, sans-serif;
+}
+
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--primary);
+  color: #fff;
+  padding: 18px 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.topbar h1 { margin: 0; font-size: 19px; font-weight: 700; }
+.topbar .sub { margin-top: 2px; font-size: 12.5px; color: #FDE3D6; }
+
+.content { flex: 1; padding: 14px 14px 92px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.guest-cta { display: flex; justify-content: space-between; align-items: center; }
+
+label { display: block; font-size: 13px; color: var(--ink-soft); margin: 12px 0 5px; font-weight: 600; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 15px;
+  color: var(--ink);
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid var(--primary);
+  border-radius: 24px;
+  padding: 4px 6px 4px 14px;
+  margin-bottom: 14px;
+}
+.search-bar .search-icon { font-size: 15px; margin-right: 8px; opacity: 0.7; }
+.search-bar input { border: none; padding: 8px 0; }
+.search-bar input:focus { outline: none; }
+
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.chip-icon { font-size: 15px; }
+
+button.primary {
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px;
+  border: none;
+  border-radius: 11px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15.5px;
+  font-weight: 700;
+}
+button.primary:active { background: var(--primary-dark); }
+
+button.ghost {
+  width: 100%;
+  padding: 12px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+button.link { background: none; border: none; color: var(--primary); font-size: 14px; padding: 6px 0; font-weight: 600; }
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.price-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.price-card-image {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  background: #FBEFE7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.price-card-image img { width: 100%; height: 100%; object-fit: cover; }
+.price-card-emoji { font-size: 40px; }
+
+.price-card-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.price-card-body { padding: 9px 11px 12px; }
+.price-card-body .name { font-weight: 700; font-size: 14px; }
+.price-card-body .meta { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.price-row:last-child { border-bottom: none; }
+.price-row .name { font-weight: 700; font-size: 15px; }
+.price-row .meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.price-row .amount { font-weight: 700; color: #fff; background: var(--primary); padding: 4px 11px; border-radius: 20px; font-size: 14px; white-space: nowrap; }
+
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-left: 6px; font-weight: 600; }
+.badge.pending { background: #FBEBD1; color: #8A5A17; }
+.badge.approved { background: #DCEEDF; color: var(--teal); }
+.badge.rejected { background: #F6DCD9; color: var(--danger); }
+
+.price-thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.price-thumb-large { width: 100%; max-height: 160px; border-radius: 10px; object-fit: cover; margin-bottom: 8px; }
+
+.navbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: flex;
+  padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px);
+}
+.navbar button { flex: 1; background: none; border: none; font-size: 11px; color: var(--ink-soft); padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-weight: 600; }
+.navbar button.active { color: var(--primary); }
+.navicon { font-size: 18px; }
+
+.error-text { color: var(--danger); font-size: 13px; margin-top: 8px; }
+.empty { text-align: center; color: var(--ink-soft); padding: 24px 10px; font-size: 14px; }
+.top-back { background: none; border: none; color: #FDE3D6; font-size: 14px; padding: 0; margin-bottom: 4px; font-weight: 600; }
+
+After making both changes exactly as given, restart the app and tell me it's done.
