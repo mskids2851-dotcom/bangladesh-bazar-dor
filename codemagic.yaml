@@ -10,6 +10,8 @@ workflows:
           cd artifacts/bangladesh-bazar-dor
           npm install
           npm run build
+          rm -rf android
+          npx cap add android
           npx cap sync android
           cd android
           chmod +x gradlew
