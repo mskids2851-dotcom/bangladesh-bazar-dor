@@ -5,21 +5,13 @@ workflows:
     environment:
       node: 20
     scripts:
-      - name: Install dependencies
+      - name: Build everything
         script: |
           cd artifacts/bangladesh-bazar-dor
           npm install
-      - name: Build web app
-        script: |
-          cd artifacts/bangladesh-bazar-dor
           npm run build
-      - name: Sync Capacitor
-        script: |
-          cd artifacts/bangladesh-bazar-dor
           npx cap sync android
-      - name: Build Android APK
-        script: |
-          cd artifacts/bangladesh-bazar-dor/android
+          cd android
           chmod +x gradlew
           ./gradlew assembleDebug
     artifacts:
