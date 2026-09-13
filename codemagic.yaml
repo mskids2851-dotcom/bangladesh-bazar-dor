@@ -1,0 +1,26 @@
+workflows:
+  android-workflow:
+    name: Bangladesh Bazar Dor Android
+    max_build_duration: 60
+    environment:
+      node: 20
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd artifacts/bangladesh-bazar-dor
+          npm install
+      - name: Build web app
+        script: |
+          cd artifacts/bangladesh-bazar-dor
+          npm run build
+      - name: Sync Capacitor
+        script: |
+          cd artifacts/bangladesh-bazar-dor
+          npx cap sync android
+      - name: Build Android APK
+        script: |
+          cd artifacts/bangladesh-bazar-dor/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+    artifacts:
+      - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.apk
