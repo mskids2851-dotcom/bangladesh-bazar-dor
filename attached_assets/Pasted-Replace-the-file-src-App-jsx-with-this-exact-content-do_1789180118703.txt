@@ -1,0 +1,659 @@
+Replace the file src/App.jsx with this exact content, do not modify anything:
+
+FILE: src/App.jsx
+import React, { useEffect, useState } from "react";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  increment,
+} from "firebase/firestore";
+import { auth, db, ADMIN_EMAILS } from "./firebase";
+import { CATEGORIES, DISTRICTS, UNITS } from "./data";
+
+const CATEGORY_ICONS = {
+  "kacha-bazar": "🥬",
+  "electronics": "🔌",
+  "grocery": "🛒",
+  "fish-meat": "🐟",
+  "fruits": "🍎",
+};
+
+function timeAgo(timestamp) {
+  if (!timestamp || !timestamp.toDate) return "";
+  const diffMs = Date.now() - timestamp.toDate().getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "এইমাত্র";
+  if (mins < 60) return `${mins} মিনিট আগে`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} ঘণ্টা আগে`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} দিন আগে`;
+  const months = Math.floor(days / 30);
+  return `${months} মাস আগে`;
+}
+
+function mapLink(it) {
+  if (it.locationLink) return it.locationLink;
+  if (it.locationLat && it.locationLng) return `https://www.google.com/maps?q=${it.locationLat},${it.locationLng}`;
+  return null;
+}
+
+async function sharePrice(it) {
+  const text = `${it.productName} — ৳${it.price}/${it.unit} (${it.districtId}${it.upazila ? ", " + it.upazila : ""}) — বাংলাদেশ বাজার দর অ্যাপে দেখুন`;
+  if (navigator.share) {
+    try { await navigator.share({ text }); } catch (e) {}
+  } else if (navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+    alert("কপি হয়েছে, এখন যেকোনো জায়গায় পেস্ট করুন");
+  }
+}
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [screen, setScreen] = useState("home");
+  const [pendingScreen, setPendingScreen] = useState("home");
+  const [selectedItemId, setSelectedItemId] = useState(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  const goProtected = (target) => {
+    if (user) {
+      setScreen(target);
+    } else {
+      setPendingScreen(target);
+      setScreen("login");
+    }
+  };
+
+  const openDetail = (id) => {
+    setSelectedItemId(id);
+    setScreen("detail");
+  };
+
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email);
+
+  if (authLoading) return <div className="app-shell"><div className="content">লোড হচ্ছে...</div></div>;
+
+  return (
+    <div className="app-shell">
+      <TopBar screen={screen} onBack={() => setScreen("home")} />
+      <div className="content">
+        {screen === "home" && <HomeScreen user={user} onNeedLogin={() => goProtected("addPrice")} onOpenDetail={openDetail} />}
+        {screen === "addPrice" && (
+          user
+            ? <AddPriceScreen user={user} onDone={() => setScreen("home")} />
+            : <LoginScreen onSuccess={() => setScreen(pendingScreen)} />
+        )}
+        {screen === "profile" && (
+          user
+            ? <ProfileScreen user={user} onOpenDetail={openDetail} />
+            : <LoginScreen onSuccess={() => setScreen(pendingScreen)} />
+        )}
+        {screen === "login" && <LoginScreen onSuccess={() => setScreen(pendingScreen)} />}
+        {screen === "admin" && isAdmin && <AdminScreen />}
+        {screen === "detail" && selectedItemId && (
+          <DetailScreen itemId={selectedItemId} user={user} onNeedLogin={() => goProtected("detail")} />
+        )}
+      </div>
+      <NavBar
+        screen={screen}
+        isAdmin={isAdmin}
+        user={user}
+        onHome={() => setScreen("home")}
+        onAddPrice={() => goProtected("addPrice")}
+        onProfile={() => goProtected("profile")}
+        onAdmin={() => setScreen("admin")}
+        onLogin={() => { setPendingScreen("home"); setScreen("login"); }}
+        onLogout={() => { signOut(auth); setScreen("home"); }}
+      />
+    </div>
+  );
+}
+
+function TopBar({ screen, onBack }) {
+  const titles = {
+    home: "বাংলাদেশ বাজার দর",
+    addPrice: "দাম যোগ করুন",
+    profile: "আমার তথ্য",
+    admin: "এডমিন প্যানেল",
+    login: "লগইন / অ্যাকাউন্ট",
+    detail: "পণ্যের বিস্তারিত",
+  };
+  return (
+    <div className="topbar">
+      {screen !== "home" && (
+        <button className="top-back" onClick={onBack}>← হোম</button>
+      )}
+      <h1>{titles[screen]}</h1>
+      {screen === "home" && <div className="sub">সারা দেশের বাজার দর, এক জায়গায়</div>}
+    </div>
+  );
+}
+
+function NavBar({ screen, isAdmin, user, onHome, onAddPrice, onProfile, onAdmin, onLogin, onLogout }) {
+  return (
+    <div className="navbar">
+      <button className={screen === "home" ? "active" : ""} onClick={onHome}><span className="navicon">🏠</span>হোম</button>
+      <button className={screen === "addPrice" ? "active" : ""} onClick={onAddPrice}><span className="navicon">➕</span>দাম যোগ</button>
+      <button className={screen === "profile" ? "active" : ""} onClick={onProfile}><span className="navicon">👤</span>আমার তথ্য</button>
+      {isAdmin && (
+        <button className={screen === "admin" ? "active" : ""} onClick={onAdmin}><span className="navicon">🛠️</span>এডমিন</button>
+      )}
+      {user
+        ? <button onClick={onLogout}><span className="navicon">🚪</span>লগআউট</button>
+        : <button className={screen === "login" ? "active" : ""} onClick={onLogin}><span className="navicon">🔑</span>লগইন</button>}
+    </div>
+  );
+}
+
+function LoginScreen({ onSuccess }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      if (mode === "login") {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+      onSuccess();
+    } catch (err) {
+      setError(errorToBangla(err.code));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="empty" style={{ marginBottom: 4 }}>
+        পণ্যের দাম যোগ করতে বা নিজের তথ্য দেখতে লগইন করুন
+      </div>
+      <form className="card" onSubmit={submit}>
+        <label>ইমেইল</label>
+        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+        <label>পাসওয়ার্ড</label>
+        <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="কমপক্ষে ৬ অক্ষর" />
+        {error && <div className="error-text">{error}</div>}
+        <button className="primary" type="submit" disabled={loading}>
+          {loading ? "অপেক্ষা করুন..." : mode === "login" ? "লগইন করুন" : "অ্যাকাউন্ট তৈরি করুন"}
+        </button>
+        <button
+          type="button"
+          className="link"
+          onClick={() => setMode(mode === "login" ? "signup" : "login")}
+        >
+          {mode === "login" ? "নতুন অ্যাকাউন্ট তৈরি করুন" : "আগে থেকে অ্যাকাউন্ট আছে? লগইন করুন"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function errorToBangla(code) {
+  const map = {
+    "auth/invalid-email": "সঠিক ইমেইল দিন",
+    "auth/email-already-in-use": "এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে",
+    "auth/weak-password": "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে",
+    "auth/wrong-password": "পাসওয়ার্ড ভুল হয়েছে",
+    "auth/user-not-found": "এই ইমেইলে কোনো অ্যাকাউন্ট নেই",
+    "auth/invalid-credential": "ইমেইল বা পাসওয়ার্ড ভুল",
+  };
+  return map[code] || "কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন";
+}
+
+function HomeScreen({ user, onNeedLogin, onOpenDetail }) {
+  const [allItems, setAllItems] = useState([]);
+  const [dbError, setDbError] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [districtId, setDistrictId] = useState("");
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "prices"),
+      where("status", "==", "approved"),
+      orderBy("createdAt", "desc"),
+      limit(300)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setAllItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (err) => setDbError(err.message));
+    return unsub;
+  }, []);
+
+  const filtered = allItems.filter((it) => {
+    if (categoryId && it.categoryId !== categoryId) return false;
+    if (districtId && it.districtId !== districtId) return false;
+    if (search.trim() && !it.productName.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    return true;
+  });
+
+  const vote = async (e, it, field) => {
+    e.stopPropagation();
+    if (!user) { onNeedLogin(); return; }
+    try {
+      await updateDoc(doc(db, "prices", it.id), { [field]: increment(1) });
+    } catch (err) {}
+  };
+
+  return (
+    <div>
+      <div className="search-bar">
+        <span className="search-icon">🔍</span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="পণ্যের নাম লিখে খুঁজুন, যেমন: আলু"
+        />
+      </div>
+
+      <div className="chip-row">
+        <button
+          className={`chip ${categoryId === "" ? "active" : ""}`}
+          onClick={() => setCategoryId("")}
+        >
+          <span className="chip-icon">🗂️</span>সব
+        </button>
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.id}
+            className={`chip ${categoryId === c.id ? "active" : ""}`}
+            onClick={() => setCategoryId(categoryId === c.id ? "" : c.id)}
+          >
+            <span className="chip-icon">{CATEGORY_ICONS[c.id] || "🏷️"}</span>{c.name}
+          </button>
+        ))}
+      </div>
+
+      <select
+        value={districtId}
+        onChange={(e) => setDistrictId(e.target.value)}
+        style={{ marginBottom: 12 }}
+      >
+        <option value="">সব জেলা</option>
+        {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
+
+      {!user && (
+        <div className="card guest-cta">
+          <span className="meta">দাম যোগ করতে লগইন করুন</span>
+          <button className="link" onClick={onNeedLogin} style={{ padding: "6px 12px" }}>লগইন করুন</button>
+        </div>
+      )}
+
+      {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
+
+      {filtered.length === 0 && <div className="empty">কোনো দাম পাওয়া যায়নি। ফিল্টার বদলে দেখুন।</div>}
+
+      <div className="grid-cards">
+        {filtered.map((it) => (
+          <div className="price-card" key={it.id} onClick={() => onOpenDetail(it.id)}>
+            <div className="price-card-image">
+              {it.imageUrl
+                ? <img src={it.imageUrl} alt={it.productName} />
+                : <span className="price-card-emoji">{CATEGORY_ICONS[it.categoryId] || "🛍️"}</span>}
+              <span className="price-card-badge">৳{it.price}/{it.unit}</span>
+            </div>
+            <div className="price-card-body">
+              <div className="name">{it.productName}</div>
+              <div className="meta">{it.upazila ? it.upazila + ", " : ""}{it.districtId}</div>
+              <div className="meta time-ago">{timeAgo(it.createdAt)}</div>
+              <div className="card-actions">
+                <button className="vote-btn" onClick={(e) => vote(e, it, "upvotes")}>👍 {it.upvotes || 0}</button>
+                <button className="vote-btn" onClick={(e) => vote(e, it, "downvotes")}>👎 {it.downvotes || 0}</button>
+                <button className="vote-btn" onClick={(e) => { e.stopPropagation(); sharePrice(it); }}>📤</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DetailScreen({ itemId, user, onNeedLogin }) {
+  const [item, setItem] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [dbError, setDbError] = useState("");
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "prices", itemId), (snap) => {
+      setItem(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+    });
+    return unsub;
+  }, [itemId]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "comments"),
+      where("priceId", "==", itemId),
+      orderBy("createdAt", "asc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (err) => setDbError(err.message));
+    return unsub;
+  }, [itemId]);
+
+  const vote = async (field) => {
+    if (!user) { onNeedLogin(); return; }
+    await updateDoc(doc(db, "prices", itemId), { [field]: increment(1) });
+  };
+
+  const postComment = async (e) => {
+    e.preventDefault();
+    if (!user) { onNeedLogin(); return; }
+    if (!commentText.trim()) return;
+    setPosting(true);
+    try {
+      await addDoc(collection(db, "comments"), {
+        priceId: itemId,
+        text: commentText.trim(),
+        authorEmail: user.email,
+        authorUid: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      setCommentText("");
+    } catch (err) {}
+    setPosting(false);
+  };
+
+  if (!item) return <div className="empty">লোড হচ্ছে...</div>;
+  const link = mapLink(item);
+
+  return (
+    <div>
+      <div className="card">
+        {item.imageUrl && <img src={item.imageUrl} alt={item.productName} className="price-thumb-large" />}
+        <div className="name" style={{ fontSize: 18 }}>{item.productName}</div>
+        <div className="amount" style={{ display: "inline-block", marginTop: 6 }}>৳{item.price}/{item.unit}</div>
+        <div className="meta" style={{ marginTop: 8 }}>
+          {CATEGORIES.find((c) => c.id === item.categoryId)?.name || ""} · {item.upazila ? item.upazila + ", " : ""}{item.districtId}
+        </div>
+        <div className="meta time-ago">{timeAgo(item.createdAt)}</div>
+        {link && <a href={link} target="_blank" rel="noreferrer" className="map-link">📍 মানচিত্রে দেখুন</a>}
+        <div className="card-actions" style={{ marginTop: 10 }}>
+          <button className="vote-btn" onClick={() => vote("upvotes")}>👍 {item.upvotes || 0}</button>
+          <button className="vote-btn" onClick={() => vote("downvotes")}>👎 {item.downvotes || 0}</button>
+          <button className="vote-btn" onClick={() => sharePrice(item)}>📤 শেয়ার</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="name" style={{ marginBottom: 10 }}>কমেন্ট ({comments.length})</div>
+        {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
+        {comments.length === 0 && <div className="empty">এখনো কোনো কমেন্ট নেই।</div>}
+        {comments.map((c) => (
+          <div key={c.id} className="comment-row">
+            <div className="comment-author">{c.authorEmail}</div>
+            <div className="comment-text">{c.text}</div>
+            <div className="meta time-ago">{timeAgo(c.createdAt)}</div>
+          </div>
+        ))}
+
+        {user ? (
+          <form onSubmit={postComment} style={{ marginTop: 10 }}>
+            <textarea
+              rows={2}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="একটা কমেন্ট লিখুন..."
+            />
+            <button className="primary" type="submit" disabled={posting} style={{ marginTop: 8 }}>
+              {posting ? "পাঠানো হচ্ছে..." : "কমেন্ট করুন"}
+            </button>
+          </form>
+        ) : (
+          <button className="ghost" onClick={onNeedLogin} style={{ marginTop: 10 }}>কমেন্ট করতে লগইন করুন</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AddPriceScreen({ user, onDone }) {
+  const [productName, setProductName] = useState("");
+  const [categoryId, setCategoryId] = useState(CATEGORIES[0].id);
+  const [districtId, setDistrictId] = useState(DISTRICTS[0]);
+  const [upazila, setUpazila] = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState(UNITS[0]);
+  const [imageUrl, setImageUrl] = useState("");
+  const [locationLink, setLocationLink] = useState("");
+  const [locationLat, setLocationLat] = useState(null);
+  const [locationLng, setLocationLng] = useState(null);
+  const [locStatus, setLocStatus] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocStatus("এই ডিভাইসে লোকেশন সাপোর্ট নেই");
+      return;
+    }
+    setLocStatus("লোকেশন খোঁজা হচ্ছে...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationLat(pos.coords.latitude);
+        setLocationLng(pos.coords.longitude);
+        setLocStatus("✓ বর্তমান লোকেশন যোগ হয়েছে");
+      },
+      () => setLocStatus("লোকেশন পাওয়া যায়নি, অনুমতি দিন বা লিংক ব্যবহার করুন"),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg("");
+    try {
+      await addDoc(collection(db, "prices"), {
+        productName,
+        categoryId,
+        districtId,
+        upazila,
+        price: Number(price),
+        unit,
+        imageUrl: imageUrl || null,
+        locationLink: locationLink || null,
+        locationLat: locationLat || null,
+        locationLng: locationLng || null,
+        postedBy: user.uid,
+        postedByEmail: user.email,
+        status: "pending",
+        upvotes: 0,
+        downvotes: 0,
+        createdAt: serverTimestamp(),
+      });
+      setMsg("ধন্যবাদ! আপনার তথ্য অ্যাডমিন অনুমোদনের পর সবাই দেখতে পাবে।");
+      setProductName(""); setPrice(""); setUpazila(""); setImageUrl("");
+      setLocationLink(""); setLocationLat(null); setLocationLng(null); setLocStatus("");
+    } catch (err) {
+      setMsg("সেভ করা যায়নি, আবার চেষ্টা করুন।");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <form className="card" onSubmit={submit}>
+      <label>পণ্যের নাম</label>
+      <input required value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="যেমন: আলু, পেঁয়াজ" />
+
+      <label>ক্যাটাগরি</label>
+      <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+        {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+
+      <label>জেলা</label>
+      <select value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
+        {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
+
+      <label>উপজেলা (ঐচ্ছিক)</label>
+      <input value={upazila} onChange={(e) => setUpazila(e.target.value)} placeholder="যেমন: সাভার" />
+
+      <label>দাম (টাকা)</label>
+      <input required type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="যেমন: ৪৫" />
+
+      <label>একক</label>
+      <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+      </select>
+
+      <label>ছবির লিংক (ঐচ্ছিক)</label>
+      <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+
+      <label>দোকানের লোকেশন (ঐচ্ছিক)</label>
+      <button type="button" className="ghost" onClick={useCurrentLocation} style={{ marginTop: 0 }}>
+        📍 বর্তমান লোকেশন ব্যবহার করুন
+      </button>
+      {locStatus && <div className="meta" style={{ marginTop: 6 }}>{locStatus}</div>}
+
+      <label>অথবা Google Maps লিংক পেস্ট করুন</label>
+      <input value={locationLink} onChange={(e) => setLocationLink(e.target.value)} placeholder="https://maps.app.goo.gl/..." />
+
+      {msg && <div className="error-text" style={{ color: "var(--teal)" }}>{msg}</div>}
+      <button className="primary" type="submit" disabled={saving}>
+        {saving ? "সেভ হচ্ছে..." : "দাম জমা দিন"}
+      </button>
+    </form>
+  );
+}
+
+function ProfileScreen({ user, onOpenDetail }) {
+  const [items, setItems] = useState([]);
+  const [dbError, setDbError] = useState("");
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "prices"),
+      where("postedBy", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (err) => setDbError(err.message));
+    return unsub;
+  }, [user]);
+
+  const remove = async (id, e) => {
+    e.stopPropagation();
+    await deleteDoc(doc(db, "prices", id));
+  };
+
+  return (
+    <div className="card">
+      <div className="meta" style={{ marginBottom: 8 }}>{user.email}</div>
+      {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
+      {items.length === 0 && <div className="empty">আপনি এখনো কোনো দাম যোগ করেননি।</div>}
+      {items.map((it) => (
+        <div className="price-row" key={it.id} onClick={() => onOpenDetail(it.id)}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {it.imageUrl && <img src={it.imageUrl} alt={it.productName} className="price-thumb" />}
+            <div>
+              <div className="name">
+                {it.productName}
+                <span className={`badge ${it.status}`}>
+                  {it.status === "pending" ? "অপেক্ষমান" : it.status === "approved" ? "অনুমোদিত" : "বাতিল"}
+                </span>
+              </div>
+              <div className="meta">{it.districtId} · ৳{it.price}/{it.unit} · {timeAgo(it.createdAt)}</div>
+            </div>
+          </div>
+          <button className="link" onClick={(e) => remove(it.id, e)}>ডিলিট</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminScreen() {
+  const [items, setItems] = useState([]);
+  const [dbError, setDbError] = useState("");
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "prices"),
+      where("status", "==", "pending"),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (err) => setDbError(err.message));
+    return unsub;
+  }, []);
+
+  const act = async (id, status) => {
+    await updateDoc(doc(db, "prices", id), { status });
+  };
+
+  return (
+    <div className="card">
+      {dbError && <div className="error-text" style={{wordBreak: "break-all"}}>{dbError}</div>}
+      {items.length === 0 && <div className="empty">অপেক্ষমান কোনো পোস্ট নেই।</div>}
+      {items.map((it) => {
+        const link = mapLink(it);
+        return (
+          <div className="price-row" key={it.id} style={{ flexDirection: "column", alignItems: "stretch" }}>
+            {it.imageUrl && <img src={it.imageUrl} alt={it.productName} className="price-thumb-large" />}
+            <div className="name">{it.productName} — ৳{it.price}/{it.unit}</div>
+            <div className="meta">{it.districtId}{it.upazila ? ", " + it.upazila : ""} · {it.postedByEmail} · {timeAgo(it.createdAt)}</div>
+            {link && <a href={link} target="_blank" rel="noreferrer" className="map-link">📍 মানচিত্রে দেখুন</a>}
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="primary" style={{ marginTop: 0 }} onClick={() => act(it.id, "approved")}>অনুমোদন</button>
+              <button className="ghost" style={{ marginTop: 0 }} onClick={() => act(it.id, "rejected")}>বাতিল</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+Now append this CSS to the end of src/index.css (do not remove anything existing):
+
+.time-ago { font-size: 11px; opacity: 0.8; }
+.map-link { display: inline-block; font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 4px; text-decoration: none; }
+.card-actions { display: flex; gap: 6px; margin-top: 8px; }
+.vote-btn { flex: 1; background: #F5F5F5; border: 1px solid var(--line); border-radius: 8px; padding: 5px 4px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.vote-btn:active { background: #ECECEC; }
+.price-card { cursor: pointer; }
+.comment-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.comment-row:last-child { border-bottom: none; }
+.comment-author { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.comment-text { font-size: 14px; margin-top: 2px; }
+
+After making both changes exactly as given, restart the app and tell me it's done.
