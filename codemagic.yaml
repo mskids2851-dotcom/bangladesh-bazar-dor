@@ -12,10 +12,9 @@ workflows:
       - name: Build everything
         script: |
           set -e
-          rm -f .npmrc
-          rm -f artifacts/.npmrc
-          rm -f artifacts/bangladesh-bazar-dor/.npmrc
+          rm -f .npmrc artifacts/.npmrc artifacts/bangladesh-bazar-dor/.npmrc
           cd artifacts/bangladesh-bazar-dor
+          rm -rf node_modules package-lock.json
           npm config set registry https://registry.npmjs.org/
           npm install --no-audit --no-fund --loglevel=error --registry=https://registry.npmjs.org/
           npm run build
