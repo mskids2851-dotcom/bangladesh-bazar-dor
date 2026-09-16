@@ -21,7 +21,7 @@ workflows:
           npm run build
           rm -rf android
           npx cap add android
-          npx capacitor-assets generate --android
+          npx @capacitor/assets generate --android
           npx cap sync android
           cd android
           chmod +x gradlew
