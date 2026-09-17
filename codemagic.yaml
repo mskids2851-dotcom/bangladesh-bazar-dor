@@ -1,83 +1,66 @@
 workflows:
-android-workflow:
-  name: Bangladesh Bazar Dor Android
-  max_build_duration: 60
-  environment:
-    node: 22
-    java: 21
-    vars:
-      NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
-      NPM_CONFIG_FUND: "false"
-      NPM_CONFIG_AUDIT: "false"
-  scripts:
-    - name: Build everything
-      script: |
-        set -e
-        rm -f .npmrc artifacts/.npmrc artifacts/bangladesh-bazar-dor/.npmrc
-        cd artifacts/bangladesh-bazar-dor
-        rm -rf node_modules package-lock.json
-        npm config set registry https://registry.npmjs.org/
-        npm install --no-audit --no-fund --loglevel=error --registry=https://registry.npmjs.org/
-        npm run build
-        rm -rf android
-        npx cap add android
-        npx @capacitor/assets generate --android
-        npx cap sync android
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleDebug
-  artifacts:
-    - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.apk
+  android-workflow:
+    name: Bangladesh Bazar Dor Android
+    max_build_duration: 60
+    environment:
+      node: 22
+      java: 21
+      vars:
+        NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
+        NPM_CONFIG_FUND: "false"
+        NPM_CONFIG_AUDIT: "false"
+    scripts:
+      - name: Build everything
+        script: |
+          set -e
+          rm -f .npmrc artifacts/.npmrc artifacts/bangladesh-bazar-dor/.npmrc
+          cd artifacts/bangladesh-bazar-dor
+          rm -rf node_modules package-lock.json
+          npm config set registry https://registry.npmjs.org/
+          npm install --no-audit --no-fund --loglevel=error --registry=https://registry.npmjs.org/
+          npm run build
+          rm -rf android
+          npx cap add android
+          npx @capacitor/assets generate --android
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+    artifacts:
+      - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.apk
 
-android-release:
-  name: Bangladesh Bazar Dor Android Release
-  max_build_duration: 60
-  environment:
-    node: 22
-    java: 21
-    groups:
-      - android_signing
-    vars:
-      NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
-      NPM_CONFIG_FUND: "false"
-      NPM_CONFIG_AUDIT: "false"
-  scripts:
-    - name: Build signed release
-      script: |
-        set -e
-        rm -f .npmrc artifacts/.npmrc artifacts/bangladesh-bazar-dor/.npmrc
-        cd artifacts/bangladesh-bazar-dor
-        rm -rf node_modules package-lock.json
-        npm config set registry https://registry.npmjs.org/
-        npm install --no-audit --no-fund --loglevel=error --registry=https://registry.npmjs.org/
-        npm run build
-        rm -rf android
-        npx cap add android
-        npx @capacitor/assets generate --android
-        npx cap sync android
-        echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/release.keystore
-        cat >> android/app/build.gradle <<'EOF'
-
-        android {
-            signingConfigs {
-                release {
-                    storeFile file(System.getenv("CM_KEYSTORE_PATH"))
-                    storePassword System.getenv("CM_KEYSTORE_PASSWORD")
-                    keyAlias System.getenv("CM_KEY_ALIAS")
-                    keyPassword System.getenv("CM_KEY_PASSWORD")
-                }
-            }
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.release
-                }
-            }
-        }
-        EOF
-        export CM_KEYSTORE_PATH=$CM_BUILD_DIR/release.keystore
-        cd android
-        chmod +x gradlew
-        ./gradlew bundleRelease assembleRelease
-  artifacts:
-    - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.aab
-    - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.apk
+  android-release:
+    name: Bangladesh Bazar Dor Android Release
+    max_build_duration: 60
+    environment:
+      node: 22
+      java: 21
+      groups:
+        - android_signing
+      vars:
+        NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
+        NPM_CONFIG_FUND: "false"
+        NPM_CONFIG_AUDIT: "false"
+    scripts:
+      - name: Build signed release
+        script: |
+          set -e
+          rm -f .npmrc artifacts/.npmrc artifacts/bangladesh-bazar-dor/.npmrc
+          cd artifacts/bangladesh-bazar-dor
+          rm -rf node_modules package-lock.json
+          npm config set registry https://registry.npmjs.org/
+          npm install --no-audit --no-fund --loglevel=error --registry=https://registry.npmjs.org/
+          npm run build
+          rm -rf android
+          npx cap add android
+          npx @capacitor/assets generate --android
+          npx cap sync android
+          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/release.keystore
+          export CM_KEYSTORE_PATH=$CM_BUILD_DIR/release.keystore
+          cat signing.gradle >> android/app/build.gradle
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease assembleRelease
+    artifacts:
+      - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.aab
+      - artifacts/bangladesh-bazar-dor/android/app/build/outputs/**/*.apk
