@@ -55,7 +55,7 @@ workflows:
           npx cap add android
           npx @capacitor/assets generate --android
           npx cap sync android
-          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/release.keystore
+          echo $CM_KEYSTORE | tr -d '\n' | base64 --decode > $CM_BUILD_DIR/release.keystore
           export CM_KEYSTORE_PATH=$CM_BUILD_DIR/release.keystore
           cat signing.gradle >> android/app/build.gradle
           cd android
