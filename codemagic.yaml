@@ -56,9 +56,6 @@ workflows:
           npx @capacitor/assets generate --android
           npx cap sync android
           echo $CM_KEYSTORE | tr -d '\n' | base64 --decode > $CM_BUILD_DIR/release.keystore
-         echo "Password length: ${#CM_KEYSTORE_PASSWORD}"
-         echo "Alias length: ${#CM_KEY_ALIAS}"
-      echo "Key password length: ${#CM_KEY_PASSWORD}"   
           export CM_KEYSTORE_PATH=$CM_BUILD_DIR/release.keystore
           cat signing.gradle >> android/app/build.gradle
           cd android
